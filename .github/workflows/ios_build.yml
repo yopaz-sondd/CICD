@@ -47,7 +47,7 @@ jobs:
 
       - name: Build archive
         run: |
-          xcodebuild -workspace DemoCICD.xcworkspace \
+          xcodebuild -workspace DemoCICD.xcodeproj \
             -scheme DemoCICD \
             -configuration Release \
             -archivePath $PWD/build/DemoCICD.xcarchive \
