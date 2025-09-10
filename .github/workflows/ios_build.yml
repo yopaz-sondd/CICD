@@ -51,6 +51,7 @@ jobs:
             -scheme DemoCICD \
             -configuration Release \
             -archivePath $PWD/build/DemoCICD.xcarchive \
+            -destination 'generic/platform=iOS' \
             clean archive \
             CODE_SIGN_STYLE=Manual \
             PROVISIONING_PROFILE_SPECIFIER="BuzzAdHocProfile" \
