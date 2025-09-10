@@ -56,6 +56,8 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             PROVISIONING_PROFILE_SPECIFIER="BuzzAdHocProfile" \
             DEVELOPMENT_TEAM=${{ secrets.IOS_TEAM_ID }}
+              -allowProvisioningUpdates \
+              -quiet
 
       - name: Export IPA
         run: |
