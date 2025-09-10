@@ -1,0 +1,71 @@
+name: iOS Adhoc Build
+
+on:
+  workflow_dispatch: # chạy tay
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+#      - name: Setup Ruby (CocoaPods nếu cần)
+#        uses: ruby/setup-ruby@v1
+#        with:
+#          ruby-version: 3.2
+
+#      - name: Install dependencies
+#        run: |
+#          pod install --project-directory=DemoCICD
+
+      - name: Decode certificate & profile
+        run: |
+          echo "$IOS_CERTIFICATE_BASE64" | base64 --decode > ios_distribution.p12
+          echo "$IOS_PROVISION_BASE64" | base64 --decode > ios_adhoc.mobileprovision
+        env:
+          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          IOS_PROVISION_BASE64: ${{ secrets.IOS_PROVISION_BASE64 }}
+
+      - name: Create Keychain & Import certificate
+        run: |
+          security create-keychain -p "" build.keychain
+          security import ios_distribution.p12 -k ~/Library/Keychains/build.keychain -P "${{ secrets.IOS_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+          security list-keychains -s ~/Library/Keychains/build.keychain
+          security default-keychain -s ~/Library/Keychains/build.keychain
+          security unlock-keychain -p "" ~/Library/Keychains/build.keychain
+          security set-keychain-settings ~/Library/Keychains/build.keychain
+
+      - name: Install provisioning profile
+        run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp ios_adhoc.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+
+      - name: Build archive
+        run: |
+          xcodebuild -workspace DemoCICD.xcworkspace \
+            -scheme DemoCICD \
+            -configuration Release \
+            -archivePath $PWD/build/DemoCICD.xcarchive \
+            clean archive \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER="BuzzAdHocProfile" \
+            DEVELOPMENT_TEAM=${{ secrets.IOS_TEAM_ID }}
+
+      - name: Export IPA
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath $PWD/build/DemoCICD.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath $PWD/build
+
+      - name: Upload Artifact (IPA)
+        uses: actions/upload-artifact@v4
+        with:
+          name: DemoCICD-Adhoc
+          path: build/DemoCICD.ipa
+
